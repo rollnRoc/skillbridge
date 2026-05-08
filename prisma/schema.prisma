@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+// ─── ENUMS (SQL Server: string olarak saklanır) ────────────────────────────────
+// UserRole değerleri: INDIVIDUAL | CORPORATE_ADMIN | PLATFORM_ADMIN
+// Language değerleri: TR | EN
+// QuestionType değerleri: MULTIPLE_CHOICE | MULTIPLE_CORRECT | OPEN_ENDED | YES_NO | ORDERING
+// CompetencyCategory değerleri: CORE | TECHNICAL | MANAGERIAL | PROFESSIONAL | ENGINEERING
+// InvitationStatus değerleri: PENDING | EMAIL_OPENED | TEST_STARTED | COMPLETED | EXPIRED
+// CreditLogType değerleri: WELCOME_BONUS | PURCHASE | TEST_GENERATION | DOC_GENERATION | AI_ANALYSIS | READY_TEST | LEVEL_EXAM | ADMIN_GRANT
+
+// ─── TAXONOMY ──────────────────────────────────────────────────────────────────
+
+model Sector {
+  id          String       @id @default(cuid())
+  name        String       @unique @db.NVarChar(255)
+  isActive    Boolean      @default(true)
+  occupations Occupation[]
+  companies   Company[]
+  createdAt   DateTime     @default(now())
+}
+
+model Occupation {
+  id           String       @id @default(cuid())
+  name         String       @db.NVarChar(255)
+  sector       Sector       @relation(fields: [sectorId], references: [id])
+  sectorId     String
+  isActive     Boolean      @default(true)
+  units        Unit[]
+  competencies Competency[]
+  createdAt    DateTime     @default(now())
+
+  @@unique([name, sectorId])
+}
+
+model Unit {
+  id           String     @id @default(cuid())
+  name         String     @db.NVarChar(255)
+  occupation   Occupation @relation(fields: [occupationId], references: [id])
+  occupationId String
+  isActive     Boolean    @default(true)
+  titles       Title[]
+  createdAt    DateTime   @default(now())
+
+  @@unique([name, occupationId])
+}
+
+model Title {
+  id        String   @id @default(cuid())
+  name      String   @db.NVarChar(255)
+  unit      Unit     @relation(fields: [unitId], references: [id])
+  unitId    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([name, unitId])
+}
+
+model Competency {
+  id           String      @id @default(cuid())
+  name         String      @db.NVarChar(255)
+  /// CompetencyCategory: CORE | TECHNICAL | MANAGERIAL | PROFESSIONAL | ENGINEERING
+  category     String      @db.NVarChar(50)
+  occupation   Occupation? @relation(fields: [occupationId], references: [id])
+  occupationId String?
+  isActive     Boolean     @default(true)
+  skills       Skill[]
+  createdAt    DateTime    @default(now())
+}
+
+model Skill {
+  id           String     @id @default(cuid())
+  name         String     @db.NVarChar(255)
+  competency   Competency @relation(fields: [competencyId], references: [id])
+  competencyId String
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+}
+
+// ─── COMPANIES & USERS ─────────────────────────────────────────────────────────
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String   @db.NVarChar(255)
+  taxNumber   String?  @unique @db.NVarChar(50)
+  sector      Sector?  @relation(fields: [sectorId], references: [id])
+  sectorId    String?
+  credits     Int      @default(0)
+  isActive    Boolean  @default(true)
+  adminUser   User?    @relation("CompanyAdmin", fields: [adminUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  adminUserId String?  @unique
+  users       User[]   @relation("CompanyUsers")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique @db.NVarChar(255)
+  passwordHash  String        @db.NVarChar(255)
+  /// UserRole: INDIVIDUAL | CORPORATE_ADMIN | PLATFORM_ADMIN
+  role          String        @default("INDIVIDUAL") @db.NVarChar(50)
+  firstName     String        @db.NVarChar(100)
+  lastName      String        @db.NVarChar(100)
+  /// Language: TR | EN
+  language      String        @default("TR") @db.NVarChar(10)
+  credits       Int           @default(0)
+  isActive      Boolean       @default(true)
+  emailVerified Boolean       @default(false)
+  rememberToken String?       @db.NVarChar(255)
+  /// Test / sınav ekranında gösterilir (opsiyonel)
+  department    String?       @db.NVarChar(255)
+  occupation    String?       @db.NVarChar(255)
+  company       Company?      @relation("CompanyUsers", fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  companyId     String?
+  adminOfCompany Company?     @relation("CompanyAdmin")
+  documents     Document[]
+  tests         Test[]
+  testSessions  TestSession[]
+  creditLogs    CreditLog[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+// ─── DOCUMENTS ─────────────────────────────────────────────────────────────────
+
+model Document {
+  id          String    @id @default(cuid())
+  title       String    @db.NVarChar(500)
+  fileUrl     String?   @db.NVarChar(1000)
+  content     String?   @db.NVarChar(Max)
+  /// Language: TR | EN
+  language    String    @default("TR") @db.NVarChar(10)
+  mimeType    String?   @db.NVarChar(100)
+  sizeBytes   Int?
+  category    String?   @db.NVarChar(100)
+  description String?   @db.NVarChar(1000)
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  tests       Test[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ─── TESTS ─────────────────────────────────────────────────────────────────────
+
+model Test {
+  id          String        @id @default(cuid())
+  title       String        @db.NVarChar(500)
+  document    Document?     @relation(fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentId  String?
+  /// JSON: { sectorId, occupationId, unitId, titleId, competencyIds[] }
+  parameters  String        @db.NVarChar(Max)
+  timeLimit   Int?
+  isPublished Boolean       @default(false)
+  isTemplate  Boolean       @default(false)
+  shareToken  String?       @unique @db.NVarChar(100)
+  owner       User          @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  questions   Question[]
+  sessions    TestSession[]
+  invitations Invitation[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Question {
+  id            String    @id @default(cuid())
+  test          Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId        String
+  /// QuestionType: MULTIPLE_CHOICE | MULTIPLE_CORRECT | OPEN_ENDED | YES_NO | ORDERING
+  type          String    @db.NVarChar(50)
+  content       String    @db.NVarChar(Max)
+  /// JSON: [{ id: string, text: string }]
+  options       String?   @db.NVarChar(Max)
+  /// JSON: string | string[] | null
+  correctAnswer String?   @db.NVarChar(Max)
+  orderIndex    Int       @default(0)
+  answers       Answer[]
+  createdAt     DateTime  @default(now())
+}
+
+// ─── TEST SESSIONS & ANSWERS ───────────────────────────────────────────────────
+
+model TestSession {
+  id          String    @id @default(cuid())
+  test        Test      @relation(fields: [testId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  testId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId      String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  score       Float?
+  aiReport    String?   @db.NVarChar(Max)
+  answers     Answer[]
+  createdAt   DateTime  @default(now())
+}
+
+model Answer {
+  id         String      @id @default(cuid())
+  session    TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId  String
+  question   Question    @relation(fields: [questionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  questionId String
+  /// JSON: kullanıcının verdiği yanıt
+  response   String      @db.NVarChar(Max)
+  isCorrect  Boolean?
+  score      Float?
+  createdAt  DateTime    @default(now())
+
+  @@unique([sessionId, questionId])
+}
+
+// ─── CREDITS ───────────────────────────────────────────────────────────────────
+
+model CreditLog {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  amount      Int
+  /// CreditLogType: WELCOME_BONUS | PURCHASE | TEST_GENERATION | DOC_GENERATION | AI_ANALYSIS | READY_TEST | LEVEL_EXAM | ADMIN_GRANT
+  type        String   @db.NVarChar(50)
+  description String?  @db.NVarChar(500)
+  createdAt   DateTime @default(now())
+}
+
+// ─── INVITATIONS ───────────────────────────────────────────────────────────────
+
+model Invitation {
+  id        String    @id @default(cuid())
+  test      Test      @relation(fields: [testId], references: [id])
+  testId    String
+  email     String    @db.NVarChar(255)
+  token     String    @unique @default(cuid()) @db.NVarChar(100)
+  /// InvitationStatus: PENDING | EMAIL_OPENED | TEST_STARTED | COMPLETED | EXPIRED
+  status    String    @default("PENDING") @db.NVarChar(50)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+

@@ -1,0 +1,19 @@
+{
+  "jsc": {
+    "target": "es2022",
+    "parser": {
+      "syntax": "typescript",
+      "decorators": false,
+      "dynamicImport": true
+    },
+    "transform": {
+      "legacyDecorator": false,
+      "decoratorMetadata": false
+    },
+    "keepClassNames": true
+  },
+  "module": {
+    "type": "commonjs"
+  },
+  "sourceMaps": true
+}
