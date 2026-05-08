@@ -31,6 +31,8 @@ export function createApp() {
     'http://127.0.0.1:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3001',
+    'https://skillbridge.com.tr',
+    'https://www.skillbridge.com.tr',
   ].filter(Boolean);
 
   const isAllowedOrigin = (origin?: string): boolean => {

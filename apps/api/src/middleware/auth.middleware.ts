@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './error.middleware';
-import { prisma } from '@org/database';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -22,18 +21,7 @@ export async function authenticate(
     : req.cookies?.accessToken;
 
   if (!token) {
-    try {
-      const user = await prisma.user.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: 'asc' },
-        select: { id: true, role: true, companyId: true },
-      });
-      if (!user) return next(new AppError(401, 'Sistemde aktif kullanıcı bulunamadı'));
-      req.user = { id: user.id, role: user.role, companyId: user.companyId ?? undefined };
-      return next();
-    } catch {
-      return next(new AppError(500, 'Kimlik doğrulama servisi hatası'));
-    }
+    return next(new AppError(401, 'Giriş yapılmamış'));
   }
 
   try {
@@ -45,19 +33,7 @@ export async function authenticate(
     req.user = payload;
     next();
   } catch {
-    // Token geçersizse de girişsiz kullanım için ilk aktif kullanıcıya düş
-    try {
-      const user = await prisma.user.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: 'asc' },
-        select: { id: true, role: true, companyId: true },
-      });
-      if (!user) return next(new AppError(401, 'Sistemde aktif kullanıcı bulunamadı'));
-      req.user = { id: user.id, role: user.role, companyId: user.companyId ?? undefined };
-      return next();
-    } catch {
-      return next(new AppError(401, 'Geçersiz token'));
-    }
+    return next(new AppError(401, 'Geçersiz veya süresi dolmuş token'));
   }
 }
 

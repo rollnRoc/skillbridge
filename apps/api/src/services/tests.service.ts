@@ -75,7 +75,23 @@ export async function getTest(id: string, ownerId: string) {
     include: { questions: { orderBy: { orderIndex: 'asc' } }, document: true },
   });
   if (!test) throw new AppError(404, 'Test bulunamadı');
-  return test;
+
+  // Soruları parse et — options ve correctAnswer DB'de JSON string olarak saklanıyor
+  const parsedQuestions = test.questions.map((q) => ({
+    ...q,
+    options: q.options ? safeJsonParse(q.options) : null,
+    correctAnswer: q.correctAnswer ? safeJsonParse(q.correctAnswer) : null,
+  }));
+
+  return { ...test, questions: parsedQuestions };
+}
+
+function safeJsonParse(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 }
 
 export async function createTestDraft(params: {
@@ -141,7 +157,7 @@ interface GenerateTestParams {
 function buildTestGenerationPrompt(p: GenerateTestParams): string {
   const difficultyLabel =
     p.difficulty === 'beginner' ? 'Başlangıç' :
-    p.difficulty === 'intermediate' ? 'Orta' : 'İleri';
+      p.difficulty === 'intermediate' ? 'Orta' : 'İleri';
 
   const typesList = p.questionTypes.join(', ');
   const competencyList = p.competencies.join(', ');

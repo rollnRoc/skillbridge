@@ -385,11 +385,11 @@ export async function getSessionResult(
     ? {}
     : canViewCompany
       ? {
-          OR: [
-            { userId: viewerId },
-            { test: { owner: { companyId: viewerCompanyId } } },
-          ],
-        }
+        OR: [
+          { userId: viewerId },
+          { test: { owner: { companyId: viewerCompanyId } } },
+        ],
+      }
       : { userId: viewerId };
 
   const session = await prisma.testSession.findFirst({
@@ -403,8 +403,27 @@ export async function getSessionResult(
     },
   });
   if (!session) throw new AppError(404, 'Sonuç bulunamadı');
-  return session;
+
+  // correctAnswer ve response alanlarını parse et — DB'de JSON string olarak saklanıyor
+  const parsedAnswers = session.answers.map((a) => ({
+    ...a,
+    question: {
+      ...a.question,
+      correctAnswer: a.question.correctAnswer ? safeJsonParse(a.question.correctAnswer) : null,
+    },
+  }));
+
+  return { ...session, answers: parsedAnswers };
 }
+
+function safeJsonParse(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 
 export async function listUserSessions(userId: string) {
   return listSessionsForViewer(userId, 'INDIVIDUAL');
@@ -422,12 +441,12 @@ export async function listSessionsForViewer(
     ? { completedAt: { not: null } }
     : canViewCompany
       ? {
-          completedAt: { not: null },
-          OR: [
-            { userId: viewerId },
-            { test: { owner: { companyId: viewerCompanyId } } },
-          ],
-        }
+        completedAt: { not: null },
+        OR: [
+          { userId: viewerId },
+          { test: { owner: { companyId: viewerCompanyId } } },
+        ],
+      }
       : { userId: viewerId, completedAt: { not: null } };
 
   return prisma.testSession.findMany({
