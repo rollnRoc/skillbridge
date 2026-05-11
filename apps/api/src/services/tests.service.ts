@@ -283,8 +283,14 @@ async function saveQuestions(params: GenerateTestParams, parsed: { questions: an
     })
   );
 
-  return questions;
+  // Frontend'e parse edilmiş halini döndür — DB'de string olarak duruyor
+  return questions.map((q) => ({
+    ...q,
+    options: q.options ? safeJsonParse(q.options) : null,
+    correctAnswer: q.correctAnswer ? safeJsonParse(q.correctAnswer) : null,
+  }));
 }
+
 
 export async function generateTestQuestions(params: GenerateTestParams) {
   const isDev = process.env.NODE_ENV !== 'production';

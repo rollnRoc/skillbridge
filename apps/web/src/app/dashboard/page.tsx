@@ -52,11 +52,10 @@ function SCard({
       className={
         loginCard
           ? 'rounded-2xl bg-white border-2 border-green-600 text-gray-900 flex flex-col shadow-md transition-shadow overflow-hidden select-text cursor-default'
-          : `rounded-2xl bg-gradient-to-br ${gradient} text-white flex flex-col shadow-lg transition-shadow overflow-hidden ${
-              formMode
-                ? 'select-text cursor-default'
-                : 'justify-between cursor-pointer select-none hover:shadow-xl'
-            }`
+          : `rounded-2xl bg-gradient-to-br ${gradient} text-white flex flex-col shadow-lg transition-shadow overflow-hidden ${formMode
+            ? 'select-text cursor-default'
+            : 'justify-between cursor-pointer select-none hover:shadow-xl'
+          }`
       }
       style={{
         width,
@@ -219,25 +218,29 @@ export default function DashboardPage() {
   const { user, fetchMe } = useAuthStore();
   const [sessions, setSessions] = useState<SessionResult[]>([]);
 
-  type DocPanel        = 'upload' | 'ai' | 'case' | null;
-  type TestPanel       = 'doc' | 'topics' | 'cv' | 'profile' | null;
-  type CandidatePanel  = 'invite' | 'bulk' | 'url' | null;
-  type EvalPanel       = 'analysis' | '360' | 'cvjd' | null;
-  type ComparePanel    = 'jd-multi' | 'cv-vs-cv' | 'sessions' | null;
+  type DocPanel = 'upload' | 'ai' | 'case' | null;
+  type TestPanel = 'doc' | 'topics' | 'cv' | 'profile' | null;
+  type CandidatePanel = 'invite' | 'bulk' | 'url' | null;
+  type EvalPanel = 'analysis' | '360' | 'cvjd' | null;
+  type ComparePanel = 'jd-multi' | 'cv-vs-cv' | 'sessions' | null;
 
-  const [docPanel,       setDocPanel]       = useState<DocPanel>(null);
-  const [testPanel,      setTestPanel]      = useState<TestPanel>(null);
+  const [docPanel, setDocPanel] = useState<DocPanel>(null);
+  const [testPanel, setTestPanel] = useState<TestPanel>(null);
   const [candidatePanel, setCandidatePanel] = useState<CandidatePanel>(null);
-  const [evalPanel,      setEvalPanel]      = useState<EvalPanel>(null);
-  const [comparePanel,   setComparePanel]   = useState<ComparePanel>(null);
+  const [evalPanel, setEvalPanel] = useState<EvalPanel>(null);
+  const [comparePanel, setComparePanel] = useState<ComparePanel>(null);
 
   useEffect(() => {
     void fetchMe();
   }, [fetchMe]);
 
   useEffect(() => {
-    listUserSessions().then(setSessions).catch(() => {});
-  }, []);
+    if (!user) {
+      setSessions([]);
+      return;
+    }
+    listUserSessions().then(setSessions).catch(() => setSessions([]));
+  }, [user]);
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`.trim() || 'Kullanıcı'
@@ -255,21 +258,21 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#F5F6FA]">
 
       {/* ── Centered modals (fixed overlay, outside scroll container) ── */}
-      {docPanel   === 'ai'     && <AiDocPanel onClose={() => setDocPanel(null)} onSaved={() => {}} />}
-      {docPanel      === 'case'     && <CaseAnalysisPanel  onClose={() => setDocPanel(null)} />}
-      {comparePanel  === 'jd-multi' && <CvJdMultiPanel     onClose={() => setComparePanel(null)} />}
-      {comparePanel  === 'cv-vs-cv' && <CvVsCvPanel        onClose={() => setComparePanel(null)} />}
-      {comparePanel  === 'sessions' && <SessionComparePanel onClose={() => setComparePanel(null)} />}
-      {testPanel  === 'doc'     && <FromDocPanel    onClose={() => setTestPanel(null)} />}
-      {testPanel  === 'topics'  && <FromTopicsPanel onClose={() => setTestPanel(null)} />}
-      {testPanel  === 'cv'      && <FromCvPanel     onClose={() => setTestPanel(null)} />}
-      {testPanel  === 'profile' && <TestProfilePanel onClose={() => setTestPanel(null)} />}
+      {docPanel === 'ai' && <AiDocPanel onClose={() => setDocPanel(null)} onSaved={() => { }} />}
+      {docPanel === 'case' && <CaseAnalysisPanel onClose={() => setDocPanel(null)} />}
+      {comparePanel === 'jd-multi' && <CvJdMultiPanel onClose={() => setComparePanel(null)} />}
+      {comparePanel === 'cv-vs-cv' && <CvVsCvPanel onClose={() => setComparePanel(null)} />}
+      {comparePanel === 'sessions' && <SessionComparePanel onClose={() => setComparePanel(null)} />}
+      {testPanel === 'doc' && <FromDocPanel onClose={() => setTestPanel(null)} />}
+      {testPanel === 'topics' && <FromTopicsPanel onClose={() => setTestPanel(null)} />}
+      {testPanel === 'cv' && <FromCvPanel onClose={() => setTestPanel(null)} />}
+      {testPanel === 'profile' && <TestProfilePanel onClose={() => setTestPanel(null)} />}
       {candidatePanel === 'invite' && <InvitePanel onClose={() => setCandidatePanel(null)} />}
-      {candidatePanel === 'bulk'   && <BulkInvitePanel onClose={() => setCandidatePanel(null)} />}
-      {candidatePanel === 'url'    && <InviteUrlPanel onClose={() => setCandidatePanel(null)} />}
+      {candidatePanel === 'bulk' && <BulkInvitePanel onClose={() => setCandidatePanel(null)} />}
+      {candidatePanel === 'url' && <InviteUrlPanel onClose={() => setCandidatePanel(null)} />}
       {evalPanel === 'analysis' && <AiAnalysisPanel onClose={() => setEvalPanel(null)} />}
-      {evalPanel === '360'      && <Assessment360Panel onClose={() => setEvalPanel(null)} />}
-      {evalPanel === 'cvjd'     && <CvJdMatchPanel onClose={() => setEvalPanel(null)} />}
+      {evalPanel === '360' && <Assessment360Panel onClose={() => setEvalPanel(null)} />}
+      {evalPanel === 'cvjd' && <CvJdMatchPanel onClose={() => setEvalPanel(null)} />}
 
       {/* ── Header ── */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">

@@ -166,8 +166,18 @@ export async function startSession(
     },
   });
 
-  return { session, test };
+  // Soruların options'ını frontend için parse et — DB'de string olarak saklanıyor
+  const parsedTest = {
+    ...test,
+    questions: test.questions.map((q: any) => ({
+      ...q,
+      options: q.options ? safeJsonParse(q.options) : null,
+    })),
+  };
+
+  return { session, test: parsedTest };
 }
+
 
 export async function saveAnswer(
   sessionId: string,
@@ -227,6 +237,12 @@ export async function completeSession(sessionId: string, userId: string) {
 // ─── Puanlama ──────────────────────────────────────────────────────────────────
 
 function calculateScore(questions: any[], answers: any[]) {
+  // correctAnswer DB'de JSON string olarak saklanıyor — parse et
+  const parsedQuestions = questions.map((q) => ({
+    ...q,
+    correctAnswer: q.correctAnswer ? safeJsonParse(q.correctAnswer) : null,
+  }));
+
   const answerMap = new Map(answers.map((a) => [a.questionId, a]));
   let correct = 0;
   let wrong = 0;
@@ -234,7 +250,7 @@ function calculateScore(questions: any[], answers: any[]) {
 
   const breakdown: Record<string, { correct: number; total: number }> = {};
 
-  for (const q of questions) {
+  for (const q of parsedQuestions) {
     const answer = answerMap.get(q.id);
 
     if (!answer || answer.response === null || answer.response === undefined) {
@@ -253,8 +269,8 @@ function calculateScore(questions: any[], answers: any[]) {
     }
   }
 
-  const score = questions.length > 0 ? (correct / questions.length) * 100 : 0;
-  return { score: Math.round(score * 10) / 10, breakdown: { correct, wrong, empty, total: questions.length, score } };
+  const score = parsedQuestions.length > 0 ? (correct / parsedQuestions.length) * 100 : 0;
+  return { score: Math.round(score * 10) / 10, breakdown: { correct, wrong, empty, total: parsedQuestions.length, score } };
 }
 
 function checkAnswer(question: any, response: unknown): boolean {
